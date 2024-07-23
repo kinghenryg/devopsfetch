@@ -48,12 +48,15 @@ get_port_info() {
                 foreign_address=$(echo "$line" | awk '{print $5}')
                 state=$(echo "$line" | awk '{print $6}')
                 port=$(echo "$local_address" | cut -d: -f2)
+
+                # Find the PID and program name for the port
                 pid=$(sudo lsof -i :$port -sTCP:LISTEN -t -n -P 2>/dev/null)
                 if [ -n "$pid" ]; then
                     program=$(ps -o comm= -p "$pid")
                 else
                     program="N/A"
                 fi
+
                 printf "%s\t%s\t%s\t%s\t%s\n" "$protocol" "$local_address" "$foreign_address" "$state" "$program"
             done
         ) | column -t -s $'\t'
@@ -66,17 +69,22 @@ get_port_info() {
                 local_address=$(echo "$line" | awk '{print $4}')
                 foreign_address=$(echo "$line" | awk '{print $5}')
                 state=$(echo "$line" | awk '{print $6}')
+                port=$(echo "$local_address" | cut -d: -f2)
+
+                # Find the PID and program name for the port
                 pid=$(sudo lsof -i :$1 -sTCP:LISTEN -t -n -P 2>/dev/null)
                 if [ -n "$pid" ]; then
                     program=$(ps -o comm= -p "$pid")
                 else
                     program="N/A"
                 fi
+
                 printf "%s\t%s\t%s\t%s\t%s\n" "$protocol" "$local_address" "$foreign_address" "$state" "$program"
             done
         ) | column -t -s $'\t'
     fi
 }
+
 
 
 # Function to get Docker information
