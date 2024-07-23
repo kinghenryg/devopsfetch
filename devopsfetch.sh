@@ -115,7 +115,8 @@ get_nginx_info() {
 get_user_info() {
     if [ -z "$1" ]; then
         echo "Users and last login times:"
-        last | head -n -2
+        # Display only users and their last login times
+        last | awk '{print $1, $4, $5, $6, $7}' | uniq
     else
         echo "Information for user $1:"
         id "$1"
@@ -123,6 +124,7 @@ get_user_info() {
         last "$1" | head -n 1
     fi
 }
+
 
 # Function to get time range information
 get_time_range_info() {
