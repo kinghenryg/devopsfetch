@@ -36,29 +36,35 @@ log_activity() {
     echo "$(date): $1" | sudo tee -a "$log_file"
 }
 
-#!/bin/bash
-
-# Function to format the table output
-format_table() {
-    column -t -s$'\t'
-}
-
 # Function to get port information
 get_port_info() {
-    echo "SERVICE        PORT        STATE        PROCESS ID"
-    echo "-------------------------------------------------"
-    ss -tuln | awk 'NR>1 {print $1 "\t" $5 "\t" $2}' | while read -r line; do
-        protocol=$(echo "$line" | awk '{print $1}')
-        port=$(echo "$line" | awk '{print $2}' | awk -F':' '{print $NF}')
-        state=$(echo "$line" | awk '{print $3}')
-        pid=$(lsof -i :$port -t 2>/dev/null | head -n 1)
-        printf "%-15s %-10s %-10s %-10s\n" "$protocol" "$port" "$state" "$pid"
-    done | format_table
+    if [ -z "$1" ]; then
+        echo "Active ports, services, and processes:"
+        (
+            printf "%-10s %-10s %-20s %-20s\n" "Protocol" "PORT" "State" "Program Name"
+            sudo lsof -i -P -n | grep LISTEN | awk '{split($9,a,":"); printf "%-10s %-10s %-20s %-20s\n", $1, a[length(a)], $10, $2 "/" $1}'
+        ) | format_table
+    else
+        echo "Information for port $1:"
+        (
+            printf "%-10s %-10s %-20s %-20s\n" "Protocol" "PORT" "State" "Program Name"
+            ss -tuln | grep ":$1 " | while read -r line; do
+                protocol=$(echo "$line" | awk '{print $1}')
+                port=$(echo "$line" | awk '{split($4,a,":"); print a[length(a)]}')
+                state=$(echo "$line" | awk '{print $2}')
+
+                pid=$(sudo lsof -i :$1 -sTCP:LISTEN -t -n -P 2>/dev/null)
+                if [ -n "$pid" ]; then
+                    program=$(ps -o comm= -p "$pid")
+                else
+                    program="N/A"
+                fi
+
+                printf "%-10s %-10s %-20s %-20s\n" "$protocol" "$port" "$state" "$program"
+            done
+        ) | format_table
+    fi
 }
-
-# Call the function
-get_port_info
-
 
 # Function to get Docker information
 get_docker_info() {
