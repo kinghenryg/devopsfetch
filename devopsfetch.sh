@@ -40,26 +40,10 @@ log_activity() {
 get_port_info() {
     if [ -z "$1" ]; then
         echo "Active ports, services, and processes:"
-        (
-            echo -e "Protocol\tLocal Address\tForeign Address\tState\tPID/Program Name"
-            ss -tuln | tail -n +2 | while read -r line; do
-                protocol=$(echo "$line" | awk '{print $1}')
-                local_address=$(echo "$line" | awk '{print $4}')
-                foreign_address=$(echo "$line" | awk '{print $5}')
-                state=$(echo "$line" | awk '{print $6}')
-                port=$(echo "$local_address" | cut -d: -f2)
+        echo -e "Protocol\tLocal Address\tForeign Address\tState\tPID/Program Name"
 
-                # Find the PID and program name for the port
-                pid=$(sudo lsof -i :$port -sTCP:LISTEN -t -n -P 2>/dev/null)
-                if [ -n "$pid" ]; then
-                    program=$(ps -o comm= -p "$pid")
-                else
-                    program="N/A"
-                fi
-
-                printf "%s\t%s\t%s\t%s\t%s\n" "$protocol" "$local_address" "$foreign_address" "$state" "$program"
-            done
-        ) | column -t -s $'\t'
+        # Get all listening ports and services
+        sudo lsof -i -P -n | grep LISTEN | awk '{print $1 "\t" $9 "\t" $10 "\t" $8 "\t" $3 "/" $1}' | column -t -s $'\t'
     else
         echo "Information for port $1:"
         (
@@ -84,6 +68,7 @@ get_port_info() {
         ) | column -t -s $'\t'
     fi
 }
+
 
 
 
