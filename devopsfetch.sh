@@ -39,9 +39,9 @@ log_activity() {
 # Function to format output as a table
 format_table() {
     # Read header
-    IFS=' ' read -ra header
+    IFS=' ' read -ra header <<< "$1"
     data=()
-
+    
     # Calculate column widths
     declare -A widths
     for col in "${header[@]}"; do
@@ -62,7 +62,7 @@ format_table() {
     # Print top border
     printf '+'
     for col in "${header[@]}"; do
-        printf -- '-%.0s' $(seq 1 $((${widths[$col]}+2)))
+        printf -- '-%.0s' $(seq 1 $((widths[$col]+2)))
         printf '+'
     done
     printf '\n'
@@ -75,8 +75,8 @@ format_table() {
 
     # Print separator
     printf '+'
-    for col in "${header[@]}"]; do
-        printf -- '-%.0s' $(seq 1 $((${widths[$col]}+2)))
+    for col in "${header[@]}"; do
+        printf -- '-%.0s' $(seq 1 $((widths[$col]+2)))
         printf '+'
     done
     printf '\n'
@@ -92,7 +92,7 @@ format_table() {
     # Print bottom border
     printf '+'
     for col in "${header[@]}"; do
-        printf -- '-%.0s' $(seq 1 $((${widths[$col]}+2)))
+        printf -- '-%.0s' $(seq 1 $((widths[$col]+2)))
         printf '+'
     done
     printf '\n'
