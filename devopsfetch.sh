@@ -40,37 +40,41 @@ log_activity() {
 get_port_info() {
     if [ -z "$1" ]; then
         echo "Active ports, services, and processes:"
-        (echo "Protocol Local Address Foreign Address State PID/Program name";
-         ss -tuln | tail -n +2 | while read -r line; do
-             protocol=$(echo "$line" | awk '{print $1}')
-             local_address=$(echo "$line" | awk '{print $4}')
-             foreign_address=$(echo "$line" | awk '{print $5}')
-             state=$(echo "$line" | awk '{print $6}')
-             port=$(echo "$local_address" | cut -d: -f2)
-             pid=$(sudo lsof -i :$port -sTCP:LISTEN -t -n -P 2>/dev/null)
-             if [ -n "$pid" ]; then
-                 program=$(ps -o comm= -p "$pid")
-             else
-                 program="N/A"
-             fi
-             echo "$protocol $local_address $foreign_address $state $program"
-         done) | format_table
+        (
+            echo -e "Protocol\tLocal Address\tForeign Address\tState\tPID/Program Name"
+            ss -tuln | tail -n +2 | while read -r line; do
+                protocol=$(echo "$line" | awk '{print $1}')
+                local_address=$(echo "$line" | awk '{print $4}')
+                foreign_address=$(echo "$line" | awk '{print $5}')
+                state=$(echo "$line" | awk '{print $6}')
+                port=$(echo "$local_address" | cut -d: -f2)
+                pid=$(sudo lsof -i :$port -sTCP:LISTEN -t -n -P 2>/dev/null)
+                if [ -n "$pid" ]; then
+                    program=$(ps -o comm= -p "$pid")
+                else
+                    program="N/A"
+                fi
+                printf "%s\t%s\t%s\t%s\t%s\n" "$protocol" "$local_address" "$foreign_address" "$state" "$program"
+            done
+        ) | column -t -s $'\t'
     else
         echo "Information for port $1:"
-        (echo "Protocol Local Address Foreign Address State PID/Program name";
-         ss -tuln | grep ":$1 " | while read -r line; do
-             protocol=$(echo "$line" | awk '{print $1}')
-             local_address=$(echo "$line" | awk '{print $4}')
-             foreign_address=$(echo "$line" | awk '{print $5}')
-             state=$(echo "$line" | awk '{print $6}')
-             pid=$(sudo lsof -i :$1 -sTCP:LISTEN -t -n -P 2>/dev/null)
-             if [ -n "$pid" ]; then
-                 program=$(ps -o comm= -p "$pid")
-             else
-                 program="N/A"
-             fi
-             echo "$protocol $local_address $foreign_address $state $program"
-         done) | format_table
+        (
+            echo -e "Protocol\tLocal Address\tForeign Address\tState\tPID/Program Name"
+            ss -tuln | grep ":$1 " | while read -r line; do
+                protocol=$(echo "$line" | awk '{print $1}')
+                local_address=$(echo "$line" | awk '{print $4}')
+                foreign_address=$(echo "$line" | awk '{print $5}')
+                state=$(echo "$line" | awk '{print $6}')
+                pid=$(sudo lsof -i :$1 -sTCP:LISTEN -t -n -P 2>/dev/null)
+                if [ -n "$pid" ]; then
+                    program=$(ps -o comm= -p "$pid")
+                else
+                    program="N/A"
+                fi
+                printf "%s\t%s\t%s\t%s\t%s\n" "$protocol" "$local_address" "$foreign_address" "$state" "$program"
+            done
+        ) | column -t -s $'\t'
     fi
 }
 
