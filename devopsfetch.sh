@@ -106,16 +106,31 @@ get_nginx_info() {
 # Function to get user information
 get_user_info() {
     if [ -z "$1" ]; then
-        echo "Users and last login times:"
+        echo "Regular users and last login times:"
         (
             printf "%-15s %-12s %-8s %-15s\n" "User" "Date" "Time" "Host"
-            last | awk '!/wtmp/ && NF > 8 {printf "%-15s %-12s %-8s %-15s\n", $1, $4, $5, $3}' | uniq
+            cut -d: -f1,3 /etc/passwd | awk -F: '$2 >= 1000 && $2 != 65534 {print $1}' | while read -r user; do
+                last_login=$(last "$user" -1 2>/dev/null | awk 'NR==1 {print $4, $5, $3}')
+                if [ -n "$last_login" ]; then
+                    printf "%-15s %-12s %-8s %-15s\n" "$user" $(echo "$last_login" | awk '{print $1, $2, $3}')
+                else
+                    printf "%-15s %-12s %-8s %-15s\n" "$user" "Never logged in" "" ""
+                fi
+            done
         ) | format_table
     else
         echo "Information for user $1:"
-        id "$1"
-        echo "Last login:"
-        last "$1" | head -n 1
+        if id "$1" >/dev/null 2>&1; then
+            if [ "$(id -u "$1")" -ge 1000 ] && [ "$(id -u "$1")" -ne 65534 ]; then
+                id "$1"
+                echo "Last login:"
+                last "$1" -1 | head -n 1
+            else
+                echo "This is a system user, not a regular user."
+            fi
+        else
+            echo "User $1 does not exist."
+        fi
     fi
 }
 
