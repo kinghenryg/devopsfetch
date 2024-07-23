@@ -41,19 +41,17 @@ get_port_info() {
     if [ -z "$1" ]; then
         echo "Active ports, services, and processes:"
         (
-            printf "%-10s %-20s %-20s %-10s %-20s\n" "Protocol" "Local Address" "Foreign Address" "State" "PID/Program Name"
-            sudo lsof -i -P -n | grep LISTEN | awk '{printf "%-10s %-20s %-20s %-10s %-20s\n", $1, $9, $10, $8, $3 "/" $1}'
+            printf "%-10s %-10s %-20s %-20s\n" "Protocol" "PORT" "State" "Program Name"
+            sudo lsof -i -P -n | grep LISTEN | awk '{split($9,a,":"); printf "%-10s %-10s %-20s %-20s\n", $1, a[length(a)], $10, $2 "/" $1}'
         ) | format_table
     else
         echo "Information for port $1:"
         (
-            printf "%-10s %-20s %-20s %-10s %-20s\n" "Protocol" "Local Address" "Foreign Address" "State" "PID/Program Name"
+            printf "%-10s %-10s %-20s %-20s\n" "Protocol" "PORT" "State" "Program Name"
             ss -tuln | grep ":$1 " | while read -r line; do
                 protocol=$(echo "$line" | awk '{print $1}')
-                local_address=$(echo "$line" | awk '{print $4}')
-                foreign_address=$(echo "$line" | awk '{print $5}')
-                state=$(echo "$line" | awk '{print $6}')
-                port=$(echo "$local_address" | cut -d: -f2)
+                port=$(echo "$line" | awk '{split($4,a,":"); print a[length(a)]}')
+                state=$(echo "$line" | awk '{print $2}')
 
                 pid=$(sudo lsof -i :$1 -sTCP:LISTEN -t -n -P 2>/dev/null)
                 if [ -n "$pid" ]; then
@@ -62,7 +60,7 @@ get_port_info() {
                     program="N/A"
                 fi
 
-                printf "%-10s %-20s %-20s %-10s %-20s\n" "$protocol" "$local_address" "$foreign_address" "$state" "$program"
+                printf "%-10s %-10s %-20s %-20s\n" "$protocol" "$port" "$state" "$program"
             done
         ) | format_table
     fi
