@@ -41,13 +41,13 @@ get_port_info() {
     if [ -z "$1" ]; then
         echo "Active ports, services, and processes:"
         (
-            printf "%-10s %-10s %-20s %-20s\n" "Protocol" "PORT" "State" "Program Name"
+            printf "%-10s %-10s %-20s %-20s\n" "SERVICE" "PORT" "STATE" "PID"
             sudo lsof -i -P -n | grep LISTEN | awk '{split($9,a,":"); printf "%-10s %-10s %-20s %-20s\n", $1, a[length(a)], $10, $2 "/" $1}'
         ) | format_table
     else
         echo "Information for port $1:"
         (
-            printf "%-10s %-10s %-20s %-20s\n" "Protocol" "PORT" "State" "Program Name"
+            printf "%-10s %-10s %-20s %-20s\n" "SERVICE" "PORT" "STATE" "PID"
             ss -tuln | grep ":$1 " | while read -r line; do
                 protocol=$(echo "$line" | awk '{print $1}')
                 port=$(echo "$line" | awk '{split($4,a,":"); print a[length(a)]}')
