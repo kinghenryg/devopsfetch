@@ -103,11 +103,6 @@ get_nginx_info() {
     fi
 }
 
-# Function to format the table output
-format_table() {
-    column -t -s$'\t'
-}
-
 # Function to get user information
 get_user_info() {
     if [ -z "$1" ]; then
@@ -140,9 +135,6 @@ get_user_info() {
     fi
 }
 
-# Call the function with or without arguments
-get_user_info "$1"
-
 # Function to get time range information
 get_time_range_info() {
     if [ -z "$1" ]; then
@@ -155,7 +147,7 @@ get_time_range_info() {
 
 # Function to format output as a table
 format_table() {
-    sed '1s/^/|/; s/$/|/; s/^/| /; s/$/ |/'
+    column -t -s$'\t' | sed '1s/^/|/; s/$/|/; s/^/| /; s/$/ |/'
 }
 
 # Main function to handle command-line arguments
@@ -188,8 +180,5 @@ main() {
     esac
 }
 
-# Infinite loop to keep the service running
-while true; do
-    main "$@"
-    sleep 3600  # Sleep for an hour before running again
-done
+# Run the main function with provided arguments
+main "$@"
