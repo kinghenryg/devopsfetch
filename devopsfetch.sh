@@ -40,7 +40,8 @@ log_activity() {
 format_table() {
     # Read header
     IFS=' ' read -ra header
-    
+    data=()
+
     # Calculate column widths
     declare -A widths
     for col in "${header[@]}"; do
@@ -74,7 +75,7 @@ format_table() {
 
     # Print separator
     printf '+'
-    for col in "${header[@]}"; do
+    for col in "${header[@]}"]; do
         printf -- '-%.0s' $(seq 1 $((${widths[$col]}+2)))
         printf '+'
     done
