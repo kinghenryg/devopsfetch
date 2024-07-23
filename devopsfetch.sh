@@ -36,6 +36,8 @@ log_activity() {
     echo "$(date): $1" | sudo tee -a "$log_file"
 }
 
+#!/bin/bash
+
 # Function to format the table output
 format_table() {
     column -t -s$'\t'
@@ -45,17 +47,18 @@ format_table() {
 get_port_info() {
     echo "SERVICE        PORT        STATE        PROCESS ID"
     echo "-------------------------------------------------"
-    ss -tuln | awk 'NR>1 {print $1 "\t" $5 "\t" $2 "\t" $6}' | while read -r line; do
+    ss -tuln | awk 'NR>1 {print $1 "\t" $5 "\t" $2}' | while read -r line; do
         protocol=$(echo "$line" | awk '{print $1}')
         port=$(echo "$line" | awk '{print $2}' | awk -F':' '{print $NF}')
         state=$(echo "$line" | awk '{print $3}')
-        pid=$(echo "$line" | awk '{print $4}' | awk -F',' '{print $2}' | awk -F'=' '{print $2}')
+        pid=$(lsof -i :$port -t 2>/dev/null | head -n 1)
         printf "%-15s %-10s %-10s %-10s\n" "$protocol" "$port" "$state" "$pid"
     done | format_table
 }
 
 # Call the function
 get_port_info
+
 
 # Function to get Docker information
 get_docker_info() {
