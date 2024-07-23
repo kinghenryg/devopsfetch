@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Function to display help
+# Function to display help information
 display_help() {
     echo "Usage: devopsfetch [OPTION]..."
     echo "Retrieve and display system information"
@@ -14,24 +14,29 @@ display_help() {
     echo "  -h, --help            Display this help message"
 }
 
+# Function to log activities to a file
 log_activity() {
     local log_file="/var/log/devopsfetch.log"
     local max_size=$((10 * 1024 * 1024))  # 10 MB
 
+    # Create log file if it doesn't exist
     if [ ! -f "$log_file" ]; then
         sudo touch "$log_file"
         sudo chmod 644 "$log_file"
     fi
 
+    # Rotate log file if it exceeds max size
     if [ "$(stat -c %s "$log_file")" -gt "$max_size" ]; then
         sudo mv "$log_file" "${log_file}.old"
         sudo touch "$log_file"
         sudo chmod 644 "$log_file"
     fi
 
+    # Append log entry
     echo "$(date): $1" | sudo tee -a "$log_file"
 }
 
+# Function to get port information
 get_port_info() {
     if [ -z "$1" ]; then
         echo "Active ports and services:"
@@ -42,6 +47,7 @@ get_port_info() {
     fi
 }
 
+# Function to get Docker information
 get_docker_info() {
     if [ -z "$1" ]; then
         echo "Docker images:"
@@ -54,6 +60,7 @@ get_docker_info() {
     fi
 }
 
+# Function to get Nginx information
 get_nginx_info() {
     if [ -z "$1" ]; then
         echo "Nginx domains and ports:"
@@ -64,6 +71,7 @@ get_nginx_info() {
     fi
 }
 
+# Function to get user information
 get_user_info() {
     if [ -z "$1" ]; then
         echo "Users and last login times:"
@@ -76,6 +84,7 @@ get_user_info() {
     fi
 }
 
+# Function to get time range information
 get_time_range_info() {
     if [ -z "$1" ]; then
         echo "Please provide a time range (e.g., '1 hour ago')"
@@ -85,10 +94,12 @@ get_time_range_info() {
     fi
 }
 
+# Function to format output as a table
 format_table() {
     column -t -s $'\t' | sed '1s/.*/ & /' | sed '1s/^/|/; 1s/$/|/; 2s/.*/&/; 2s/^/|/; 2s/$/|/; s/^/| /; s/$/ |/'
 }
 
+# Main function to handle command-line arguments
 main() {
     log_activity "DevOpsFetch executed with arguments: $*"
 
@@ -123,4 +134,3 @@ while true; do
     main "$@"
     sleep 3600  # Sleep for an hour before running again
 done
-
