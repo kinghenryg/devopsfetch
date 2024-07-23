@@ -40,12 +40,14 @@ log_activity() {
 get_port_info() {
     if [ -z "$1" ]; then
         echo "Active ports, services, and processes:"
-        echo -e "Protocol\tLocal Address\tForeign Address\tState\tPID/Program Name" | format_table
-        sudo lsof -i -P -n | grep LISTEN | awk '{print $1 "\t" $9 "\t" $10 "\t" $8 "\t" $3 "/" $1}' | format_table
+        (
+            printf "%-10s %-20s %-20s %-10s %-20s\n" "Protocol" "Local Address" "Foreign Address" "State" "PID/Program Name"
+            sudo lsof -i -P -n | grep LISTEN | awk '{printf "%-10s %-20s %-20s %-10s %-20s\n", $1, $9, $10, $8, $3 "/" $1}'
+        ) | format_table
     else
         echo "Information for port $1:"
         (
-            echo -e "Protocol\tLocal Address\tForeign Address\tState\tPID/Program Name"
+            printf "%-10s %-20s %-20s %-10s %-20s\n" "Protocol" "Local Address" "Foreign Address" "State" "PID/Program Name"
             ss -tuln | grep ":$1 " | while read -r line; do
                 protocol=$(echo "$line" | awk '{print $1}')
                 local_address=$(echo "$line" | awk '{print $4}')
@@ -53,7 +55,6 @@ get_port_info() {
                 state=$(echo "$line" | awk '{print $6}')
                 port=$(echo "$local_address" | cut -d: -f2)
 
-                # Find the PID and program name for the port
                 pid=$(sudo lsof -i :$1 -sTCP:LISTEN -t -n -P 2>/dev/null)
                 if [ -n "$pid" ]; then
                     program=$(ps -o comm= -p "$pid")
@@ -61,7 +62,7 @@ get_port_info() {
                     program="N/A"
                 fi
 
-                printf "%s\t%s\t%s\t%s\t%s\n" "$protocol" "$local_address" "$foreign_address" "$state" "$program"
+                printf "%-10s %-20s %-20s %-10s %-20s\n" "$protocol" "$local_address" "$foreign_address" "$state" "$program"
             done
         ) | format_table
     fi
@@ -71,9 +72,17 @@ get_port_info() {
 get_docker_info() {
     if [ -z "$1" ]; then
         echo "Docker images:"
-        docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}" | format_table
+        (
+            printf "%-30s %-20s %-20s %-15s\n" "Repository" "Tag" "ID" "Size"
+            docker images --format "{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}" | 
+            awk '{printf "%-30s %-20s %-20s %-15s\n", $1, $2, $3, $4}'
+        ) | format_table
         echo -e "\nDocker containers:"
-        docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" | format_table
+        (
+            printf "%-20s %-30s %-20s %-30s\n" "Names" "Image" "Status" "Ports"
+            docker ps --format "{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" | 
+            awk '{printf "%-20s %-30s %-20s %-30s\n", $1, $2, $3, $4}'
+        ) | format_table
     else
         echo "Information for container $1:"
         docker inspect "$1"
@@ -84,8 +93,12 @@ get_docker_info() {
 get_nginx_info() {
     if [ -z "$1" ]; then
         echo "Nginx domains and ports:"
-        echo -e "Domain\tPort"
-        grep -r server_name /etc/nginx/sites-enabled/ | awk '{print $2}' | sed 's/;$//' | sort | uniq | format_table
+        (
+            printf "%-30s %-10s\n" "Domain" "Port"
+            grep -r server_name /etc/nginx/sites-enabled/ | 
+            awk '{print $2}' | sed 's/;$//' | sort | uniq | 
+            awk '{printf "%-30s %-10s\n", $1, "80"}'
+        ) | format_table
     else
         echo "Configuration for domain $1:"
         grep -r -A 20 "server_name $1" /etc/nginx/sites-enabled/
@@ -96,9 +109,10 @@ get_nginx_info() {
 get_user_info() {
     if [ -z "$1" ]; then
         echo "Users and last login times:"
-        # Display only users and their last login times
-        echo -e "User\tDate\tTime\tHost"
-        last | awk '{print $1 "\t" $4 "\t" $5 "\t" $6 "\t" $7}' | uniq | format_table
+        (
+            printf "%-15s %-12s %-8s %-15s\n" "User" "Date" "Time" "Host"
+            last | awk '!/wtmp/ && NF > 8 {printf "%-15s %-12s %-8s %-15s\n", $1, $4, $5, $3}' | uniq
+        ) | format_table
     else
         echo "Information for user $1:"
         id "$1"
@@ -119,7 +133,7 @@ get_time_range_info() {
 
 # Function to format output as a table
 format_table() {
-    column -t -s $'\t' | sed '1s/.*/ & /' | sed '1s/^/|/; 1s/$/|/; 2s/.*/&/; 2s/^/|/; 2s/$/|/; s/^/| /; s/$/ |/'
+    sed '1s/^/|/; s/$/|/; s/^/| /; s/$/ |/'
 }
 
 # Main function to handle command-line arguments
