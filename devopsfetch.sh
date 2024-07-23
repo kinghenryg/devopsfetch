@@ -103,18 +103,24 @@ get_nginx_info() {
     fi
 }
 
+# Function to format the table output
+format_table() {
+    column -t -s$'\t'
+}
+
 # Function to get user information
 get_user_info() {
     if [ -z "$1" ]; then
         echo "Regular users and last login times:"
         (
-            printf "%-15s %-12s %-8s %-15s\n" "User" "Date" "Time" "Host"
+            printf "%-15s %-20s %-15s\n" "User" "Login Time" "Session Duration"
             cut -d: -f1,3 /etc/passwd | awk -F: '$2 >= 1000 && $2 != 65534 {print $1}' | while read -r user; do
-                last_login=$(last "$user" -1 2>/dev/null | awk 'NR==1 {print $4, $5, $3}')
+                last_login=$(last "$user" -1 2>/dev/null | awk 'NR==1 {print $4, $5, $6, $7, $8, $9}')
+                session_duration=$(last "$user" -1 2>/dev/null | awk 'NR==1 {print $10, $11, $12, $13, $14, $15, $16, $17}')
                 if [ -n "$last_login" ]; then
-                    printf "%-15s %-12s %-8s %-15s\n" "$user" $(echo "$last_login" | awk '{print $1, $2, $3}')
+                    printf "%-15s %-20s %-15s\n" "$user" "$last_login" "$session_duration"
                 else
-                    printf "%-15s %-12s %-8s %-15s\n" "$user" "Never logged in" "" ""
+                    printf "%-15s %-20s %-15s\n" "$user" "Never logged in" ""
                 fi
             done
         ) | format_table
@@ -133,6 +139,9 @@ get_user_info() {
         fi
     fi
 }
+
+# Call the function with or without arguments
+get_user_info "$1"
 
 # Function to get time range information
 get_time_range_info() {
