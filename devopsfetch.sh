@@ -1,0 +1,126 @@
+#!/bin/bash
+
+# Function to display help
+display_help() {
+    echo "Usage: devopsfetch [OPTION]..."
+    echo "Retrieve and display system information"
+    echo
+    echo "Options:"
+    echo "  -p, --port [PORT]     Display active ports or specific port info"
+    echo "  -d, --docker [NAME]   Display Docker images/containers or specific container info"
+    echo "  -n, --nginx [DOMAIN]  Display Nginx domains or specific domain config"
+    echo "  -u, --users [USER]    Display user logins or specific user info"
+    echo "  -t, --time RANGE      Display activities within specified time range"
+    echo "  -h, --help            Display this help message"
+}
+
+log_activity() {
+    local log_file="/var/log/devopsfetch.log"
+    local max_size=$((10 * 1024 * 1024))  # 10 MB
+
+    if [ ! -f "$log_file" ]; then
+        sudo touch "$log_file"
+        sudo chmod 644 "$log_file"
+    fi
+
+    if [ "$(stat -c %s "$log_file")" -gt "$max_size" ]; then
+        sudo mv "$log_file" "${log_file}.old"
+        sudo touch "$log_file"
+        sudo chmod 644 "$log_file"
+    fi
+
+    echo "$(date): $1" | sudo tee -a "$log_file"
+}
+
+get_port_info() {
+    if [ -z "$1" ]; then
+        echo "Active ports and services:"
+        (echo "Protocol Local Address Foreign Address State"; ss -tuln | tail -n +2) | format_table
+    else
+        echo "Information for port $1:"
+        (echo "Protocol Local Address Foreign Address State"; ss -tuln | grep ":$1 ") | format_table
+    fi
+}
+
+get_docker_info() {
+    if [ -z "$1" ]; then
+        echo "Docker images:"
+        docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}"
+        echo -e "\nDocker containers:"
+        docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+    else
+        echo "Information for container $1:"
+        docker inspect "$1"
+    fi
+}
+
+get_nginx_info() {
+    if [ -z "$1" ]; then
+        echo "Nginx domains and ports:"
+        grep -r server_name /etc/nginx/sites-enabled/ | awk '{print $2}' | sed 's/;$//' | sort | uniq
+    else
+        echo "Configuration for domain $1:"
+        grep -r -A 20 "server_name $1" /etc/nginx/sites-enabled/
+    fi
+}
+
+get_user_info() {
+    if [ -z "$1" ]; then
+        echo "Users and last login times:"
+        last | head -n -2
+    else
+        echo "Information for user $1:"
+        id "$1"
+        echo "Last login:"
+        last "$1" | head -n 1
+    fi
+}
+
+get_time_range_info() {
+    if [ -z "$1" ]; then
+        echo "Please provide a time range (e.g., '1 hour ago')"
+    else
+        echo "Activities within $1:"
+        journalctl --since "$1"
+    fi
+}
+
+format_table() {
+    column -t -s $'\t' | sed '1s/.*/ & /' | sed '1s/^/|/; 1s/$/|/; 2s/.*/&/; 2s/^/|/; 2s/$/|/; s/^/| /; s/$/ |/'
+}
+
+main() {
+    log_activity "DevOpsFetch executed with arguments: $*"
+
+    case "$1" in
+        -p|--port)
+            get_port_info "$2"
+            ;;
+        -d|--docker)
+            get_docker_info "$2"
+            ;;
+        -n|--nginx)
+            get_nginx_info "$2"
+            ;;
+        -u|--users)
+            get_user_info "$2"
+            ;;
+        -t|--time)
+            get_time_range_info "$2"
+            ;;
+        -h|--help)
+            display_help
+            ;;
+        *)
+            echo "Invalid option. Use -h or --help for usage information."
+            exit 1
+            ;;
+    esac
+}
+
+# Infinite loop to keep the service running
+while true; do
+    main "$@"
+    sleep 3600  # Sleep for an hour before running again
+done
+
