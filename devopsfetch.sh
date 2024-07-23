@@ -40,10 +40,8 @@ log_activity() {
 get_port_info() {
     if [ -z "$1" ]; then
         echo "Active ports, services, and processes:"
-        echo -e "Protocol\tLocal Address\tForeign Address\tState\tPID/Program Name"
-
-        # Get all listening ports and services
-        sudo lsof -i -P -n | grep LISTEN | awk '{print $1 "\t" $9 "\t" $10 "\t" $8 "\t" $3 "/" $1}' | column -t -s $'\t'
+        echo -e "Protocol\tLocal Address\tForeign Address\tState\tPID/Program Name" | format_table
+        sudo lsof -i -P -n | grep LISTEN | awk '{print $1 "\t" $9 "\t" $10 "\t" $8 "\t" $3 "/" $1}' | format_table
     else
         echo "Information for port $1:"
         (
@@ -65,20 +63,17 @@ get_port_info() {
 
                 printf "%s\t%s\t%s\t%s\t%s\n" "$protocol" "$local_address" "$foreign_address" "$state" "$program"
             done
-        ) | column -t -s $'\t'
+        ) | format_table
     fi
 }
-
-
-
 
 # Function to get Docker information
 get_docker_info() {
     if [ -z "$1" ]; then
         echo "Docker images:"
-        docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}"
+        docker images --format "table {{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}" | format_table
         echo -e "\nDocker containers:"
-        docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+        docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" | format_table
     else
         echo "Information for container $1:"
         docker inspect "$1"
@@ -89,7 +84,8 @@ get_docker_info() {
 get_nginx_info() {
     if [ -z "$1" ]; then
         echo "Nginx domains and ports:"
-        grep -r server_name /etc/nginx/sites-enabled/ | awk '{print $2}' | sed 's/;$//' | sort | uniq
+        echo -e "Domain\tPort"
+        grep -r server_name /etc/nginx/sites-enabled/ | awk '{print $2}' | sed 's/;$//' | sort | uniq | format_table
     else
         echo "Configuration for domain $1:"
         grep -r -A 20 "server_name $1" /etc/nginx/sites-enabled/
@@ -101,7 +97,8 @@ get_user_info() {
     if [ -z "$1" ]; then
         echo "Users and last login times:"
         # Display only users and their last login times
-        last | awk '{print $1, $4, $5, $6, $7}' | uniq
+        echo -e "User\tDate\tTime\tHost"
+        last | awk '{print $1 "\t" $4 "\t" $5 "\t" $6 "\t" $7}' | uniq | format_table
     else
         echo "Information for user $1:"
         id "$1"
@@ -109,7 +106,6 @@ get_user_info() {
         last "$1" | head -n 1
     fi
 }
-
 
 # Function to get time range information
 get_time_range_info() {
