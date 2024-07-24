@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Prettytable code
+# Prettytable code with row and column borders
 
 _prettytable_char_top_left="┌"
 _prettytable_char_horizontal="─"
@@ -17,7 +17,7 @@ _prettytable_char_vertical_horizontal="┼"
 _prettytable_color_none="0"
 
 function _prettytable_prettify_lines() {
-    cat - | sed -e "s@^@${_prettytable_char_vertical}@;s@\$@	@;s@	@	${_prettytable_char_vertical}@g"
+    cat - | sed -e "s@^@${_prettytable_char_vertical}@;s@\$@ ${_prettytable_char_vertical}@;s@	@ ${_prettytable_char_vertical} @g"
 }
 
 function _prettytable_fix_border_lines() {
@@ -42,27 +42,27 @@ function prettytable() {
         # Top border
         echo -n "${_prettytable_char_top_left}"
         for i in $(seq 2 ${cols}); do
-            echo -ne "\t${_prettytable_char_vertical_horizontal_top}"
+            echo -ne "${_prettytable_char_horizontal}${_prettytable_char_vertical_horizontal_top}"
         done
-        echo -e "\t${_prettytable_char_top_right}"
+        echo -e "${_prettytable_char_horizontal}${_prettytable_char_top_right}"
 
         echo -e "${header}" | _prettytable_prettify_lines
 
         # Header/Body delimiter
         echo -n "${_prettytable_char_vertical_horizontal_left}"
         for i in $(seq 2 ${cols}); do
-            echo -ne "\t${_prettytable_char_vertical_horizontal}"
+            echo -ne "${_prettytable_char_horizontal}${_prettytable_char_vertical_horizontal}"
         done
-        echo -e "\t${_prettytable_char_vertical_horizontal_right}"
+        echo -e "${_prettytable_char_horizontal}${_prettytable_char_vertical_horizontal_right}"
 
         echo -e "${body}" | _prettytable_prettify_lines
 
         # Bottom border
         echo -n "${_prettytable_char_bottom_left}"
         for i in $(seq 2 ${cols}); do
-            echo -ne "\t${_prettytable_char_vertical_horizontal_bottom}"
+            echo -ne "${_prettytable_char_horizontal}${_prettytable_char_vertical_horizontal_bottom}"
         done
-        echo -e "\t${_prettytable_char_bottom_right}"
+        echo -e "${_prettytable_char_horizontal}${_prettytable_char_bottom_right}"
     } | column -t -s $'\t' | _prettytable_fix_border_lines | _prettytable_colorize_lines "${color}" "2"
 }
 
