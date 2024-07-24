@@ -1,70 +1,66 @@
 #!/bin/bash
 
-# Prettytable code
-
-_prettytable_char_top_left="┌"
-_prettytable_char_horizontal="─"
-_prettytable_char_vertical="│"
-_prettytable_char_bottom_left="└"
-_prettytable_char_bottom_right="┘"
-_prettytable_char_top_right="┐"
-_prettytable_char_vertical_horizontal_left="├"
-_prettytable_char_vertical_horizontal_right="┤"
-_prettytable_char_vertical_horizontal_top="┬"
-_prettytable_char_vertical_horizontal_bottom="┴"
-_prettytable_char_vertical_horizontal="┼"
-
-_prettytable_color_none="0"
-
-function _prettytable_prettify_lines() {
-    cat - | sed -e "s@^@${_prettytable_char_vertical}@;s@\$@	@;s@	@	${_prettytable_char_vertical}@g"
-}
-
-function _prettytable_fix_border_lines() {
-    cat - | sed -e "1s@ @${_prettytable_char_horizontal}@g;3s@ @${_prettytable_char_horizontal}@g;\$s@ @${_prettytable_char_horizontal}@g"
-}
-
-function _prettytable_colorize_lines() {
-    local color="$1"
-    local range="$2"
-    local ansicolor="$(eval "echo \${_prettytable_color_${color}}")"
-
-    cat - | sed -e "${range}s@\\([^${_prettytable_char_vertical}]\\{1,\\}\\)@"$'\E'"[${ansicolor}m\1"$'\E'"[${_prettytable_color_none}m@g"
-}
-
+# prettytable function
 function prettytable() {
-    local cols="${1}"
-    local color="${2:-none}"
-    local input="$(cat -)"
-    local header="$(echo -e "${input}"|head -n1)"
-    local body="$(echo -e "${input}"|tail -n+2)"
-    {
-        # Top border
-        echo -n "${_prettytable_char_top_left}"
-        for i in $(seq 2 ${cols}); do
-            echo -ne "\t${_prettytable_char_vertical_horizontal_top}"
-        done
-        echo -e "\t${_prettytable_char_top_right}"
+  local columns="$1"
+  local data="$2"
 
-        echo -e "${header}" | _prettytable_prettify_lines
+  # Replace complex character definitions with simpler ones
+  local top_left="┌"
+  local horizontal="─"
+  local vertical="│"
+  local bottom_left="└"
+  local bottom_right="┘"
+  local top_right="┐"
+  local v_h_left="├"
+  local v_h_right="┤"
+  local v_h_top="┬"
+  local v_h_bottom="┴"
+  local v_h_cross="┼"
 
-        # Header/Body delimiter
-        echo -n "${_prettytable_char_vertical_horizontal_left}"
-        for i in $(seq 2 ${cols}); do
-            echo -ne "\t${_prettytable_char_vertical_horizontal}"
-        done
-        echo -e "\t${_prettytable_char_vertical_horizontal_right}"
+  # Create header and body arrays
+  local header=($(echo "$data" | head -n 1))
+  local body=($(echo "$data" | tail -n +2))
 
-        echo -e "${body}" | _prettytable_prettify_lines
+  # Generate table header
+  printf "%s" "$top_left"
+  for ((i=1; i<columns; i++)); do
+    printf "%s" "$v_h_top"
+  done
+  printf "%s\n" "$top_right"
 
-        # Bottom border
-        echo -n "${_prettytable_char_bottom_left}"
-        for i in $(seq 2 ${cols}); do
-            echo -ne "\t${_prettytable_char_vertical_horizontal_bottom}"
-        done
-        echo -e "\t${_prettytable_char_bottom_right}"
-    } | column -t -s $'\t' | _prettytable_fix_border_lines | _prettytable_colorize_lines "${color}" "2"
+  # Format header rows
+  for ((i=0; i<${#header[@]}; i++)); do
+    printf "%s%s\t" "$vertical" "${header[i]}"
+  done
+  printf "%s\n" "$vertical"
+
+  # Generate header/body delimiter
+  printf "%s" "$v_h_left"
+  for ((i=1; i<columns; i++)); do
+    printf "%s" "$v_h_cross"
+  done
+  printf "%s\n" "$v_h_right"
+
+  # Format body rows
+  for row in "${body[@]}"; do
+    printf "%s" "$vertical"
+    IFS=$'\t' read -ra cols <<< "$row"
+    for col in "${cols[@]}"; do
+      printf "%s\t" "$col"
+    done
+    printf "%s\n" "$vertical"
+  done
+
+  # Generate table footer
+  printf "%s" "$bottom_left"
+  for ((i=1; i<columns; i++)); do
+    printf "%s" "$v_h_bottom"
+  done
+  printf "%s\n" "$bottom_right"
 }
+
+
 
 # Function to display help information
 display_help() {
