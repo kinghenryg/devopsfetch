@@ -132,7 +132,6 @@ get_port_info() {
     fi
 }
 
-
 # Function to get Docker information
 get_docker_info() {
     if [ -z "$1" ]; then
@@ -150,7 +149,7 @@ get_docker_info() {
         ) | prettytable 4
     else
         echo "Information for container $1:"
-        docker inspect "$1"
+        docker inspect "$1" | jq '.[] | {Name: .Name, Image: .Config.Image, State: .State.Status, Ports: .NetworkSettings.Ports}'
     fi
 }
 
@@ -181,25 +180,30 @@ get_user_info() {
                 session_duration=$(last "$user" -1 2>/dev/null | awk 'NR==1 {print $10, $11, $12, $13, $14, $15, $16, $17}')
                 if [ -n "$last_login" ]; then
                     printf "%-15s %-20s %-15s\n" "$user" "$last_login" "$session_duration"
+                else
+                    printf "%-15s %-20s %-15s\n" "$user" "Never logged in" "-"
                 fi
             done
         ) | prettytable 3
     else
-        echo "Information for user $1:"
-        id "$1"
-        last "$1"
+        echo "Last login time for user $1:"
+        (
+            printf "%-20s %-20s\n" "Login Time" "Session Duration"
+            last "$1" -1 2>/dev/null | awk 'NR==1 {printf "%-20s %-20s\n", $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17}'
+        ) | prettytable 2
     fi
 }
 
 # Function to display activities within a time range
 display_time_range_activities() {
-    if [ -z "$1" ]; then
-        echo "Please specify a time range (e.g., 1h, 1d)."
-        exit 1
-    fi
+    local start_time="$1"
+    local end_time="$2"
 
-    echo "Activities within the last $1:"
-    journalctl --since "now - $1" | tail -n 100
+    echo "Activities from $start_time to $end_time:"
+    (
+        printf "%-20s %-10s %-10s %-20s\n" "Time" "Level" "PID" "Message"
+        journalctl --since "$start_time" --until "$end_time" | tail -n 100 | awk '{printf "%-20s %-10s %-10s %-20s\n", $1 " " $2, $4, $6, $7}'
+    ) | prettytable 4
 }
 
 # Parse command-line options
@@ -227,7 +231,11 @@ while [ "$1" != "" ]; do
             ;;
         -t | --time)
             shift
-            display_time_range_activities "$1"
+            if [ -z "$1" ] || [ -z "$2" ]; then
+                echo "Please provide both start and end times."
+                exit 1
+            fi
+            display_time_range_activities "$1" "$2"
             exit 0
             ;;
         -h | --help)
