@@ -1,275 +1,248 @@
-#!/usr/bin/env bash
-####
-# Copyright (c) 2016-2021
-#   Jakob Westhoff <jakob@westhoffswelt.de>
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-#  - Redistributions of source code must retain the above copyright notice, this
-#    list of conditions and the following disclaimer.
-#  - Redistributions in binary form must reproduce the above copyright notice,
-#    this list of conditions and the following disclaimer in the documentation
-#    and/or other materials provided with the distribution.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-####
+#!/bin/bash
 
-# Table characters
-declare -r CHAR_TOP_LEFT="┌"
-declare -r CHAR_HORIZONTAL="─"
-declare -r CHAR_VERTICAL="│"
-declare -r CHAR_BOTTOM_LEFT="└"
-declare -r CHAR_BOTTOM_RIGHT="┘"
-declare -r CHAR_TOP_RIGHT="┐"
-declare -r CHAR_VERTICAL_HORIZONTAL_LEFT="├"
-declare -r CHAR_VERTICAL_HORIZONTAL_RIGHT="┤"
-declare -r CHAR_VERTICAL_HORIZONTAL_TOP="┬"
-declare -r CHAR_VERTICAL_HORIZONTAL_BOTTOM="┴"
-declare -r CHAR_VERTICAL_HORIZONTAL="┼"
+# Prettytable code
 
-# Color codes
-declare -r COLOR_BLUE="0;34"
-declare -r COLOR_GREEN="0;32"
-declare -r COLOR_CYAN="0;36"
-declare -r COLOR_RED="0;31"
-declare -r COLOR_PURPLE="0;35"
-declare -r COLOR_YELLOW="0;33"
-declare -r COLOR_GRAY="1;30"
-declare -r COLOR_LIGHT_BLUE="1;34"
-declare -r COLOR_LIGHT_GREEN="1;32"
-declare -r COLOR_LIGHT_CYAN="1;36"
-declare -r COLOR_LIGHT_RED="1;31"
-declare -r COLOR_LIGHT_PURPLE="1;35"
-declare -r COLOR_LIGHT_YELLOW="1;33"
-declare -r COLOR_LIGHT_GRAY="0;37"
-declare -r COLOR_BLACK="0;30"
-declare -r COLOR_WHITE="1;37"
-declare -r COLOR_NONE="0"
+_prettytable_char_top_left="┌"
+_prettytable_char_horizontal="─"
+_prettytable_char_vertical="│"
+_prettytable_char_bottom_left="└"
+_prettytable_char_bottom_right="┘"
+_prettytable_char_top_right="┐"
+_prettytable_char_vertical_horizontal_left="├"
+_prettytable_char_vertical_horizontal_right="┤"
+_prettytable_char_vertical_horizontal_top="┬"
+_prettytable_char_vertical_horizontal_bottom="┴"
+_prettytable_char_vertical_horizontal="┼"
 
-# Function to prettify lines with table borders
-prettytable_prettify_lines() {
-    sed -e "s@^@${CHAR_VERTICAL}@;s@\$@    @;s@    @   ${CHAR_VERTICAL}@g"
+_prettytable_color_none="0"
+
+function _prettytable_prettify_lines() {
+    cat - | sed -e "s@^@${_prettytable_char_vertical}@;s@\$@	@;s@	@	${_prettytable_char_vertical}@g"
 }
 
-# Function to fix border lines
-prettytable_fix_border_lines() {
-    sed -e "1s@ @${CHAR_HORIZONTAL}@g;3s@ @${CHAR_HORIZONTAL}@g;\$s@ @${CHAR_HORIZONTAL}@g"
+function _prettytable_fix_border_lines() {
+    cat - | sed -e "1s@ @${_prettytable_char_horizontal}@g;3s@ @${_prettytable_char_horizontal}@g;\$s@ @${_prettytable_char_horizontal}@g"
 }
 
-# Function to colorize table lines
-prettytable_colorize_lines() {
+function _prettytable_colorize_lines() {
     local color="$1"
     local range="$2"
-    local ansicolor="$(eval "echo \${COLOR_${color}}")"
-    sed -e "${range}s@\\([^${CHAR_VERTICAL}]\\{1,\\}\\)@"$'\E'"[${ansicolor}m\1"$'\E'"[${COLOR_NONE}m@g"
+    local ansicolor="$(eval "echo \${_prettytable_color_${color}}")"
+
+    cat - | sed -e "${range}s@\\([^${_prettytable_char_vertical}]\\{1,\\}\\)@"$'\E'"[${ansicolor}m\1"$'\E'"[${_prettytable_color_none}m@g"
 }
 
-# Function to generate and display the table
-prettytable() {
-    local cols="$1"
+function prettytable() {
+    local cols="${1}"
     local color="${2:-none}"
-    local input
-    input=$(cat -)
-    local header
-    header=$(echo -e "${input}" | head -n1)
-    local body
-    body=$(echo -e "${input}" | tail -n+2)
-
+    local input="$(cat -)"
+    local header="$(echo -e "${input}"|head -n1)"
+    local body="$(echo -e "${input}"|tail -n+2)"
     {
         # Top border
-        echo -n "${CHAR_TOP_LEFT}"
-        for i in $(seq 2 "${cols}"); do
-            echo -ne "\t${CHAR_VERTICAL_HORIZONTAL_TOP}"
+        echo -n "${_prettytable_char_top_left}"
+        for i in $(seq 2 ${cols}); do
+            echo -ne "\t${_prettytable_char_vertical_horizontal_top}"
         done
-        echo -e "\t${CHAR_TOP_RIGHT}"
-        echo -e "${header}" | prettytable_prettify_lines
+        echo -e "\t${_prettytable_char_top_right}"
+
+        echo -e "${header}" | _prettytable_prettify_lines
+
         # Header/Body delimiter
-        echo -n "${CHAR_VERTICAL_HORIZONTAL_LEFT}"
-        for i in $(seq 2 "${cols}"); do
-            echo -ne "\t${CHAR_VERTICAL_HORIZONTAL}"
+        echo -n "${_prettytable_char_vertical_horizontal_left}"
+        for i in $(seq 2 ${cols}); do
+            echo -ne "\t${_prettytable_char_vertical_horizontal}"
         done
-        echo -e "\t${CHAR_VERTICAL_HORIZONTAL_RIGHT}"
-        echo -e "${body}" | prettytable_prettify_lines
+        echo -e "\t${_prettytable_char_vertical_horizontal_right}"
+
+        echo -e "${body}" | _prettytable_prettify_lines
+
         # Bottom border
-        echo -n "${CHAR_BOTTOM_LEFT}"
-        for i in $(seq 2 "${cols}"); do
-            echo -ne "\t${CHAR_VERTICAL_HORIZONTAL_BOTTOM}"
+        echo -n "${_prettytable_char_bottom_left}"
+        for i in $(seq 2 ${cols}); do
+            echo -ne "\t${_prettytable_char_vertical_horizontal_bottom}"
         done
-        echo -e "\t${CHAR_BOTTOM_RIGHT}"
-    } | column -t -s $'\t' | prettytable_fix_border_lines | prettytable_colorize_lines "${color}" "2"
+        echo -e "\t${_prettytable_char_bottom_right}"
+    } | column -t -s $'\t' | _prettytable_fix_border_lines | _prettytable_colorize_lines "${color}" "2"
 }
 
-# Log file setup
-LOG_FILE="/var/log/devopsfetch.log"
-if [[ ! -f "$LOG_FILE" ]]; then
-    sudo touch "$LOG_FILE"
-    sudo chmod 644 "$LOG_FILE"
-fi
-
-log() {
-    echo "$(date '+%Y-%m-%d %H:%M:%S') $1" >> "$LOG_FILE"
+# Function to display help information
+display_help() {
+    echo "Usage: devopsfetch [OPTION]..."
+    echo "Retrieve and display system information"
+    echo
+    echo "Options:"
+    echo "  -p, --port [PORT]     Display active ports or specific port info"
+    echo "  -d, --docker [NAME]   Display Docker images/containers or specific container info"
+    echo "  -n, --nginx [DOMAIN]  Display Nginx domains or specific domain config"
+    echo "  -u, --users [USER]    Display user logins or specific user info"
+    echo "  -t, --time RANGE      Display activities within specified time range"
+    echo "  -h, --help            Display this help message"
 }
 
-# Display active ports and services
-display_active_ports() {
-    echo -e "Proto\tLocal Address\tForeign Address\tState\tPID/Program name" | cat - <(sudo netstat -tulpn | grep LISTEN | awk '{print $1"\t"$4"\t"$5"\t"$6"\t"$7}') | prettytable 5 cyan
-}
+# Function to log activities to a file
+log_activity() {
+    local log_file="/var/log/devopsfetch.log"
+    local max_size=$((10 * 1024 * 1024))  # 10 MB
 
-# Get port info
-get_port_info() {
-    echo -e "State\tRecv-Q\tSend-Q\tLocal Address:Port\tPeer Address:Port" | cat - <(ss -tuln sport = ":$1" | tail -n +2 | awk '{print $1"\t"$2"\t"$3"\t"$4"\t"$5}') | prettytable 5 green
-}
-
-# List Docker images
-list_docker_images() {
-    echo -e "REPOSITORY\tTAG\tIMAGE ID\tCREATED\tSIZE" | cat - <(docker images | tail -n +2) | prettytable 5 blue
-}
-
-# List Docker containers
-list_docker_containers() {
-    echo -e "CONTAINER ID\tIMAGE\tCOMMAND\tCREATED\tSTATUS\tPORTS\tNAMES" | cat - <(docker ps | tail -n +2) | prettytable 7 purple
-}
-
-# Get container info
-get_container_info() {
-    docker inspect "$1" | jq -r '.[] | {Id, Name, Image, State: .State.Status, IP: .NetworkSettings.IPAddress, Ports: .NetworkSettings.Ports}' | prettytable 6 yellow
-}
-
-# Display Nginx domains
-display_nginx_domains() {
-    echo -e "Server Name" | cat - <(sudo nginx -T | grep "server_name" | awk '{print $2}' | sort | uniq) | prettytable 1 light_blue
-}
-
-# Display Nginx domain info
-display_nginx_domain_info() {
-    echo "Configuration for domain: $1"
-    grep -A 10 -B 10 "server_name $1" /etc/nginx/sites-available/* | prettytable 1 light_green
-}
-
-# List users
-list_users() {
-    echo -e "Username" | cat - <(awk -F':' '{ print $1}' /etc/passwd) | prettytable 1 light_cyan
-}
-
-# Display user last login times
-display_user_last_log_in_time() {
-    lastlog | prettytable 4 light_purple
-}
-
-# Fetch user info
-fetch_user_info() {
-    echo -e "Username\tUID\tGID\tHome\tShell" | cat - <(grep "^$1:" /etc/passwd | awk -F: '{print $1"\t"$3"\t"$4"\t"$6"\t"$7}') | prettytable 5 light_red
-}
-
-# Display time range info for a particular date
-display_time_range_info_for_a_particular_date() {
-    local start_date="$1"
-    local end_date="$2"
-    if [[ -z "$end_date" ]]; then
-        end_date="$start_date"
+    # Create log file if it doesn't exist
+    if [ ! -f "$log_file" ]; then
+        sudo touch "$log_file"
+        sudo chmod 644 "$log_file"
     fi
-    journalctl --since "$start_date 00:00:00" --until "$end_date 23:59:59" | prettytable 3 light_yellow
+
+    # Rotate log file if it exceeds max size
+    if [ "$(stat -c %s "$log_file")" -gt "$max_size" ]; then
+        sudo mv "$log_file" "${log_file}.old"
+        sudo touch "$log_file"
+        sudo chmod 644 "$log_file"
+    fi
+
+    # Append log entry
+    echo "$(date): $1" | sudo tee -a "$log_file"
 }
 
-# Display help options
-display_help_options() {
-    cat <<EOF
-Usage: $0 [options]
-Options:
-    -p, --port [PORT]       Display active ports and services or specific port info
-    -d, --docker [NAME]     Display Docker images and containers or specific container info
-    -n, --nginx [DOMAIN]    Display Nginx domains and ports or specific domain info
-    -u, --users [USERNAME]  List users and their last login times or specific user info
-    -t, --time DATE         Display logs for a specific date (format: YYYY-MM-DD)
-    -m, --monitor           Enable continuous monitoring mode
-    -h, --help              Show this help message
-EOF
+# Function to get port information
+get_port_info() {
+    if [ -z "$1" ]; then
+        echo "Active ports, services, and processes:"
+        (
+            printf "%-10s %-10s %-20s %-20s\n" "SERVICE" "PORT" "STATE" "PID"
+            sudo lsof -i -P -n | grep LISTEN | awk '{split($9,a,":"); printf "%-10s %-10s %-20s %-20s\n", $1, a[length(a)], $10, $2 "/" $1}'
+        ) | prettytable 4
+    else
+        echo "Information for port $1:"
+        (
+            printf "%-10s %-10s %-20s %-20s\n" "SERVICE" "PORT" "STATE" "PID"
+            ss -tuln | grep ":$1 " | while read -r line; do
+                protocol=$(echo "$line" | awk '{print $1}')
+                port=$(echo "$line" | awk '{split($4,a,":"); print a[length(a)]}')
+                state=$(echo "$line" | awk '{print $2}')
+
+                pid=$(sudo lsof -i :$1 -sTCP:LISTEN -t -n -P 2>/dev/null)
+                if [ -n "$pid" ]; then
+                    program=$(ps -p "$pid" -o comm=)
+                else
+                    program="N/A"
+                fi
+
+                printf "%-10s %-10s %-20s %-20s\n" "$protocol" "$port" "$state" "$program"
+            done
+        ) | prettytable 4
+    fi
 }
 
-# Monitor system activities
-monitor_system_activities() {
-    while true; do
-        clear
-        echo "Monitoring System Activities..."
-        display_active_ports
-        list_docker_images
-        list_docker_containers
-        display_nginx_domains
-        list_users
-        sleep 60
-    done
+
+# Function to get Docker information
+get_docker_info() {
+    if [ -z "$1" ]; then
+        echo "Docker images:"
+        (
+            printf "%-30s %-20s %-20s %-15s\n" "Repository" "Tag" "ID" "Size"
+            docker images --format "{{.Repository}}\t{{.Tag}}\t{{.ID}}\t{{.Size}}" | 
+            awk '{printf "%-30s %-20s %-20s %-15s\n", $1, $2, $3, $4}'
+        ) | prettytable 4
+        echo -e "\nDocker containers:"
+        (
+            printf "%-20s %-30s %-20s %-30s\n" "Names" "Image" "Status" "Ports"
+            docker ps --format "{{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" | 
+            awk '{printf "%-20s %-30s %-20s %-30s\n", $1, $2, $3, $4}'
+        ) | prettytable 4
+    else
+        echo "Information for container $1:"
+        docker inspect "$1"
+    fi
 }
 
-# Process command-line arguments
-while [[ "$#" -gt 0 ]]; do
+# Function to get Nginx information
+get_nginx_info() {
+    if [ -z "$1" ]; then
+        echo "Nginx domains and ports:"
+        (
+            printf "%-30s %-10s\n" "Domain" "Port"
+            grep -r server_name /etc/nginx/sites-enabled/ | 
+            awk '{print $2}' | sed 's/;$//' | sort | uniq | 
+            awk '{printf "%-30s %-10s\n", $1, "80"}'
+        ) | prettytable 2
+    else
+        echo "Configuration for domain $1:"
+        grep -r -A 20 "server_name $1" /etc/nginx/sites-enabled/
+    fi
+}
+
+# Function to get user information
+get_user_info() {
+    if [ -z "$1" ]; then
+        echo "Regular users and last login times:"
+        (
+            printf "%-15s %-20s %-15s\n" "User" "Login Time" "Session Duration"
+            cut -d: -f1,3 /etc/passwd | awk -F: '$2 >= 1000 && $2 != 65534 {print $1}' | while read -r user; do
+                last_login=$(last "$user" -1 2>/dev/null | awk 'NR==1 {print $4, $5, $6, $7, $8, $9}')
+                session_duration=$(last "$user" -1 2>/dev/null | awk 'NR==1 {print $10, $11, $12, $13, $14, $15, $16, $17}')
+                if [ -n "$last_login" ]; then
+                    printf "%-15s %-20s %-15s\n" "$user" "$last_login" "$session_duration"
+                fi
+            done
+        ) | prettytable 3
+    else
+        echo "Information for user $1:"
+        id "$1"
+        last "$1"
+    fi
+}
+
+# Function to display activities within a time range
+display_time_range_activities() {
+    if [ -z "$1" ]; then
+        echo "Please specify a time range (e.g., 1h, 1d)."
+        exit 1
+    fi
+
+    echo "Activities within the last $1:"
+    journalctl --since "now - $1" | tail -n 100
+}
+
+# Parse command-line options
+while [ "$1" != "" ]; do
     case "$1" in
-        -p|--port) shift
-            if [[ "$#" -eq 1 ]]; then
-                display_active_ports
-                get_port_info "$1"
-            else
-                echo "Invalid argument for --port"
-                exit 1
-            fi
+        -p | --port)
+            shift
+            get_port_info "$1"
+            exit 0
             ;;
-        -d|--docker) shift
-            if [[ "$#" -eq 1 ]]; then
-                list_docker_images
-                list_docker_containers
-                get_container_info "$1"
-            else
-                echo "Invalid argument for --docker"
-                exit 1
-            fi
+        -d | --docker)
+            shift
+            get_docker_info "$1"
+            exit 0
             ;;
-        -n|--nginx) shift
-            if [[ "$#" -eq 1 ]]; then
-                display_nginx_domains
-                display_nginx_domain_info "$1"
-            else
-                echo "Invalid argument for --nginx"
-                exit 1
-            fi
+        -n | --nginx)
+            shift
+            get_nginx_info "$1"
+            exit 0
             ;;
-        -u|--users) shift
-            if [[ "$#" -eq 1 ]]; then
-                list_users
-                display_user_last_log_in_time
-                fetch_user_info "$1"
-            else
-                echo "Invalid argument for --users"
-                exit 1
-            fi
+        -u | --users)
+            shift
+            get_user_info "$1"
+            exit 0
             ;;
-        -t|--time) shift
-            if [[ "$#" -eq 1 ]]; then
-                display_time_range_info_for_a_particular_date "$1"
-            else
-                echo "Invalid argument for --time"
-                exit 1
-            fi
+        -t | --time)
+            shift
+            display_time_range_activities "$1"
+            exit 0
             ;;
-        -m|--monitor)
-            monitor_system_activities
-            ;;
-        -h|--help)
-            display_help_options
+        -h | --help)
+            display_help
+            exit 0
             ;;
         *)
             echo "Invalid option: $1"
-            display_help_options
+            display_help
             exit 1
             ;;
     esac
     shift
 done
+
+# If no options were provided, display help
+display_help
+exit 0
